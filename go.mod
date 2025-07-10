@@ -1,4 +1,4 @@
-module github.com/fengyily/nhppluginssdk
+module github.com/fengyily/nhp-plugins-sdk
 
 go 1.24.2
 
