@@ -1,4 +1,4 @@
-module gitcode.com/xisai/nhppluginssdk
+module github.com/fengyily/nhppluginssdk
 
 go 1.24.2
 
