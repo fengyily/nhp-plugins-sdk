@@ -34,7 +34,7 @@ type RefreshResponse struct {
 }
 
 type JWTToken struct {
-	jwtKey []byte
+	JwtKey []byte
 }
 
 func (jwttoken *JWTToken) GenerateAll(ac string, res *common.ResourceData) (string, string, error) {
@@ -59,7 +59,7 @@ func (jwttoken *JWTToken) GenerateAll(ac string, res *common.ResourceData) (stri
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// 生成完整的已签名token
-	tokenString, err := token.SignedString(jwttoken.jwtKey)
+	tokenString, err := token.SignedString(jwttoken.JwtKey)
 	if err != nil {
 		return "", "", err
 	}
@@ -78,7 +78,7 @@ func (jwttoken *JWTToken) GenerateAll(ac string, res *common.ResourceData) (stri
 	// 使用HS256算法创建refresh token
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	// 生成完整的已签名refresh token
-	refreshTokenString, err := refreshToken.SignedString(jwttoken.jwtKey)
+	refreshTokenString, err := refreshToken.SignedString(jwttoken.JwtKey)
 	if err != nil {
 		return "", "", err
 	}
@@ -114,7 +114,7 @@ func (jwttoken *JWTToken) ExchangeNHPToken(nhpToken string, nhpRefreshToken stri
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// 生成完整的已签名token
-	tokenString, err := token.SignedString(jwttoken.jwtKey)
+	tokenString, err := token.SignedString(jwttoken.JwtKey)
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +128,7 @@ func (jwttoken *JWTToken) Validate(tokenString string, tokenType TokenType) (boo
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return jwttoken.jwtKey, nil
+		return jwttoken.JwtKey, nil
 	})
 
 	if err != nil {
