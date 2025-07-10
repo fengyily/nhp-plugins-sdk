@@ -345,48 +345,13 @@ func findResourceFromUrl(resId string) (*ReResponse, string, error) {
 		return nil, fmt.Sprintf("50%d", apiResponse.Code), fmt.Errorf("API request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
 	}
 	//  Construct return structure
-	resp := &ReResponse{
-		ID:           apiResponse.Data.ID,
-		CreatedAt:    apiResponse.Data.CreatedAt,
-		UpdatedAt:    apiResponse.Data.UpdatedAt,
-		SiteName:     apiResponse.Data.SiteName,
-		SiteURL:      apiResponse.Data.SiteURL,
-		SiteIcon:     apiResponse.Data.SiteIcon,
-		Description:  apiResponse.Data.Description,
-		Category:     apiResponse.Data.Category,
-		Status:       apiResponse.Data.Status,
-		IsCommend:    apiResponse.Data.IsCommend,
-		JwtSecret:    apiResponse.Data.JwtSecret,
-		Opentime:     apiResponse.Data.Opentime,
-		SkipAuth:     apiResponse.Data.SkipAuth,
-		AppID:        apiResponse.Data.AppID,
-		TokenExpire:  apiResponse.Data.TokenExpire,
-		CreatedBy:    apiResponse.Data.CreatedBy,
-		UpdatedBy:    apiResponse.Data.UpdatedBy,
-		DeletedBy:    apiResponse.Data.DeletedBy,
-		CookieDomain: apiResponse.Data.CookieDomain,
+	reResponse := &ReResponse{
+		FullResponseData: apiResponse.Data.FullResponseData,
+		ServiceInfo:      apiResponse.Data.ServiceInfo,
+		Resources:        apiResponse.Data.Resources,
+		ExtInfo:          apiResponse.Data.ExtInfo,
 	}
-
-	// Copy ExtInfo fields
-	resp.ExtInfo.ClientId = apiResponse.Data.ExtInfo.ClientId
-	resp.ExtInfo.LoginAppKey = apiResponse.Data.ExtInfo.LoginAppKey
-	resp.ExtInfo.LoginAppSecret = apiResponse.Data.ExtInfo.LoginAppSecret
-	resp.ExtInfo.RedirectWithParams = apiResponse.Data.ExtInfo.RedirectWithParams
-
-	// Convert Resources
-	for _, res := range apiResponse.Data.Resources {
-		resourceData := ResourceData{
-			AcID:     res.AcID,
-			Hostname: res.Hostname,
-			IP:       res.IP,
-			Port:     res.Port,
-			Maskhost: res.Maskhost,
-			Protocol: res.Protocol,
-		}
-		resp.Resources = append(resp.Resources, resourceData)
-	}
-
-	return resp, "", nil
+	return reResponse, "", nil
 }
 
 func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
@@ -492,83 +457,4 @@ func FindResourceApi(ctx *gin.Context, resId string) (*common.ResourceData, erro
 	}
 	err = fmt.Errorf("FindResourceApi failed")
 	return nil, err
-}
-
-type FullResponse struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data struct {
-		ID          int       `json:"ID"`
-		CreatedAt   time.Time `json:"CreatedAt"`
-		UpdatedAt   time.Time `json:"UpdatedAt"`
-		SiteName    string    `json:"site_name"`
-		SiteURL     string    `json:"site_url"`
-		SiteIcon    string    `json:"site_icon"`
-		Description string    `json:"description"`
-		Category    string    `json:"category"`
-		Status      string    `json:"status"`
-		IsCommend   bool      `json:"is_commend"`
-		JwtSecret   string    `json:"jwt_secret"`
-		Resources   []struct {
-			AcID     string `json:"ac_id"`
-			Hostname string `json:"hostname"`
-			IP       string `json:"ip"`
-			Port     int    `json:"port"`
-			Maskhost bool   `json:"maskhost"`
-			Protocol string `json:"protocol"`
-		} `json:"resources"`
-		ExtInfo struct {
-			ClientId           string `json:"ClientId"`
-			LoginAppKey        string `json:"LoginAppKey"`
-			LoginAppSecret     string `json:"LoginAppSecret"`
-			RedirectWithParams string `json:"RedirectWithParams"`
-		} `json:"ext_info"`
-		Opentime     int    `json:"opentime"`
-		SkipAuth     bool   `json:"skip_auth"`
-		AppID        string `json:"app_id"`
-		TokenExpire  int64  `json:"token_expire"`
-		CreatedBy    int    `json:"CreatedBy"`
-		UpdatedBy    int    `json:"UpdatedBy"`
-		DeletedBy    int    `json:"DeletedBy"`
-		CookieDomain string `json:"cookie_domain"`
-	} `json:"data"`
-}
-
-// Define return structure
-type ReResponse struct {
-	ID          int            `json:"ID"`
-	CreatedAt   time.Time      `json:"CreatedAt"`
-	UpdatedAt   time.Time      `json:"UpdatedAt"`
-	SiteName    string         `json:"site_name"`
-	SiteURL     string         `json:"site_url"`
-	SiteIcon    string         `json:"site_icon"`
-	Description string         `json:"description"`
-	Category    string         `json:"category"`
-	Status      string         `json:"status"`
-	IsCommend   bool           `json:"is_commend"`
-	JwtSecret   string         `json:"jwt_secret"`
-	Opentime    int            `json:"opentime"`
-	SkipAuth    bool           `json:"skip_auth"`
-	AppID       string         `json:"app_id"`
-	TokenExpire int64          `json:"token_expire"`
-	CreatedBy   int            `json:"CreatedBy"`
-	UpdatedBy   int            `json:"UpdatedBy"`
-	DeletedBy   int            `json:"DeletedBy"`
-	Resources   []ResourceData `json:"resources"`
-	ExtInfo     struct {
-		ClientId           string `json:"ClientId"`
-		LoginAppKey        string `json:"LoginAppKey"`
-		LoginAppSecret     string `json:"LoginAppSecret"`
-		RedirectWithParams string `json:"RedirectWithParams"`
-	} `json:"ext_info"`
-	CookieDomain string `json:"cookie_domain"`
-}
-
-type ResourceData struct {
-	AcID     string `json:"ac_id"`
-	Hostname string `json:"hostname"`
-	IP       string `json:"ip"`
-	Port     int    `json:"port"`
-	Maskhost bool   `json:"maskhost"`
-	Protocol string `json:"protocol"`
 }
