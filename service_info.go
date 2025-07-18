@@ -1,6 +1,10 @@
 package nhppluginssdk
 
-import "time"
+import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+)
 
 type FullResponse struct {
 	Code int        `json:"code"`
@@ -53,8 +57,15 @@ type ResourceData struct {
 	Maskhost bool   `json:"maskhost"`
 	Protocol string `json:"protocol"`
 }
+
 type ServiceInfo struct {
+	AppId  string `json:"app_id"`
 	IP     string `json:"ip"`
 	Port   int    `json:"port"`
 	Scheme string `json:"scheme"` // 注意是小写 "scheme"
+}
+
+type JWTClaims struct {
+	EncryptedData string `json:"access_key"` // 加密后的数据
+	jwt.RegisteredClaims
 }

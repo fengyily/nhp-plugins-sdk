@@ -139,6 +139,16 @@ func updateResource(file string) (err error) {
 	return err
 }
 
+func Close() error {
+	if baseConfigWatch != nil {
+		baseConfigWatch.Close()
+	}
+	if resConfigWatch != nil {
+		resConfigWatch.Close()
+	}
+	return nil
+}
+
 func RefreshToken(ctx *gin.Context, req *common.HttpKnockRequest, res *common.ResourceData, helper *plugins.HttpServerPluginHelper) (*common.ServerKnockAckMsg, error) {
 	if helper == nil {
 		return nil, fmt.Errorf("refreshToken: helper is null")
