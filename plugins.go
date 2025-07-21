@@ -93,6 +93,23 @@ func Init(in *plugins.PluginParamsIn) error {
 	return nil
 }
 
+func GetAuthUrl() string {
+	if baseConf == nil {
+		log.Error("baseConf is nil")
+		return ""
+	}
+	authUrl := baseConf.AuthUrl
+	if len(authUrl) == 0 {
+		log.Error("AuthUrl is not provided.")
+		return ""
+	}
+	if !strings.HasPrefix(authUrl, "http") {
+		log.Error("AuthUrl is not a valid URL: %s", authUrl)
+		return ""
+	}
+	return authUrl
+}
+
 func updateConfig(file string) (err error) {
 	utils.CatchPanicThenRun(func() {
 		err = errLoadConfig
