@@ -38,3 +38,11 @@ func GetLocalMac() string {
 func Log() *nhplog.Logger {
 	return log
 }
+
+func GetResourceMode() string {
+	if baseConf == nil {
+		log.Error("baseConf is nil")
+		return ""
+	}
+	return baseConf.ResourceMode
+}
