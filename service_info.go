@@ -16,15 +16,8 @@ type FullResponse struct {
 type ReResponse struct {
 	FullResponseData
 	Resources   []ResourceData `json:"resources"`
-	ExtInfo     ExtInfo        `json:"ext_info"`
+	ExtInfo     map[string]any `json:"ext_info"`
 	ServiceInfo ServiceInfo    `json:"service_info,omitempty"`
-}
-
-type ExtInfo struct {
-	ClientId           string `json:"ClientId"`
-	LoginAppKey        string `json:"LoginAppKey"`
-	LoginAppSecret     string `json:"LoginAppSecret"`
-	RedirectWithParams string `json:"RedirectWithParams"`
 }
 
 type FullResponseData struct {

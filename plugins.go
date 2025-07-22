@@ -386,8 +386,8 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 			Resources:         make(map[string]*common.ResourceInfo),
 		},
 		// Initialize extended fields
-		AppKey:             resRsp.ExtInfo.LoginAppKey,
-		AppSecret:          resRsp.ExtInfo.LoginAppSecret,
+		AppKey:             GetStringFromMap(resRsp.ExtInfo, "LoginAppKey"),
+		AppSecret:          GetStringFromMap(resRsp.ExtInfo, "LoginAppSecret"),
 		AccessKey:          "",
 		SecretKey:          "",
 		ExInfo:             make(map[string]any),
@@ -397,11 +397,8 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 		CookieDomain:       resRsp.CookieDomain,
 	}
 
-	resourceGroup.ExInfo, _ = StructToMap(resRsp.ExtInfo)
-	// resourceGroup.ExInfo["ClientId"] = resRsp.ExtInfo.ClientId
-	// resourceGroup.ExInfo["LoginAppKey"] = resRsp.ExtInfo.LoginAppKey
-	// resourceGroup.ExInfo["LoginAppSecret"] = resRsp.ExtInfo.LoginAppSecret
-	// resourceGroup.ExInfo["RedirectWithParams"] = resRsp.ExtInfo.RedirectWithParams
+	resourceGroup.ExInfo = resRsp.ExtInfo
+
 	resourceGroup.ExInfo["JWTSecret"] = resRsp.JwtSecret
 	resourceGroup.ExInfo["Title"] = resRsp.SiteName
 	resourceGroup.ExInfo["TokenExpire"] = resRsp.TokenExpire
@@ -409,12 +406,7 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 	resourceGroup.ExInfo["Port"] = resRsp.ServiceInfo.Port
 	resourceGroup.ExInfo["Scheme"] = resRsp.ServiceInfo.Scheme
 
-	//resourceGroup.ExInfo
-	//
-
-	// resourceGroup.ExInfo["AuthUrl"] = resRsp.SiteURL
-
-	if resRsp.ExtInfo.RedirectWithParams == "true" {
+	if GetStringFromMap(resRsp.ExtInfo, "RedirectWithParams") == "true" {
 		resourceGroup.RedirectWithParams = true
 	}
 
@@ -489,9 +481,9 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 		}
 		serviceInfo := ServiceInfo{
 			AppId:  res.ResourceId,
-			IP:     res.ExInfo["Ip"].(string),
-			Port:   res.ExInfo["Port"].(int),
-			Scheme: res.ExInfo["Scheme"].(string),
+			IP:     GetStringFromMap(res.ExInfo, "Ip"),
+			Port:   GetIntFromMap(res.ExInfo, "Port"),
+			Scheme: GetStringFromMap(res.ExInfo, "Scheme"),
 		}
 
 		// 1. 序列化ServiceInfo为JSON
@@ -520,17 +512,22 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 	}
 }
 
-func StructToMap(obj interface{}) (map[string]interface{}, error) {
-	data, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
+func GetStringFromMap(m map[string]any, key string) string {
+	if value, ok := m[key]; ok {
+		if strValue, ok := value.(string); ok {
+			return strValue
+		}
 	}
+	return ""
+}
 
-	var result map[string]interface{}
-	err = json.Unmarshal(data, &result)
-	if err != nil {
-		return nil, err
+func GetIntFromMap(m map[string]any, key string) int {
+	if value, ok := m[key]; ok {
+		if intValue, ok := value.(int); ok {
+			return intValue
+		} else if floatValue, ok := value.(float64); ok {
+			return int(floatValue)
+		}
 	}
-
-	return result, nil
+	return 0
 }
