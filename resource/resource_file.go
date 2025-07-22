@@ -79,6 +79,7 @@ func updateResource(file string) (err error) {
 		res.ResourceId = resId
 	}
 
+	log.Info("resourceMap: %v", resourceMap)
 	return err
 }
 
