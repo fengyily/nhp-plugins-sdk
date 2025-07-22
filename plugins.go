@@ -77,6 +77,7 @@ func Init(in *plugins.PluginParamsIn) error {
 		updateConfig(fileNameBase)
 	})
 
+	resourceHander.Init(in, baseConf)
 	rand.Seed(time.Now().UnixNano())
 	return nil
 }
@@ -109,6 +110,7 @@ func updateConfig(file string) (err error) {
 		resourceHander = resource.NewResource(resource.ResourceTypeAPI)
 		log.Info("Resource mode set to default API")
 	}
+
 	return err
 }
 

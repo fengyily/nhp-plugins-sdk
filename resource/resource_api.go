@@ -22,6 +22,12 @@ func (a *APIResourceHandler) Init(in *plugins.PluginParamsIn, conf *Config) erro
 	return nil // Placeholder return
 }
 
+func (a *APIResourceHandler) Update(conf *Config) error {
+	baseConf = conf
+	// Update logic for API resource handler
+	return nil // Placeholder return
+}
+
 func (a *APIResourceHandler) FindResourceByID(resId string) (*common.ResourceData, error) {
 	resourceMapMutex.Lock()
 	defer resourceMapMutex.Unlock()

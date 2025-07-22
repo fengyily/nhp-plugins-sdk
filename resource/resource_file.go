@@ -38,6 +38,12 @@ func (f *FileResourceHandler) Init(in *plugins.PluginParamsIn, conf *Config) err
 	return nil
 }
 
+func (a *FileResourceHandler) Update(conf *Config) error {
+	baseConf = conf
+	// Update logic for API resource handler
+	return nil // Placeholder return
+}
+
 func (f *FileResourceHandler) FindResourceByID(resId string) (*common.ResourceData, error) {
 	resourceMapMutex.Lock()
 	defer resourceMapMutex.Unlock()

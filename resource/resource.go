@@ -16,6 +16,7 @@ const (
 
 type ResourceHandler interface {
 	Init(in *plugins.PluginParamsIn, baseConf *Config) error
+	Update(baseConf *Config) error
 	FindResourceByID(id string) (*common.ResourceData, error)
 	Close() error
 }
