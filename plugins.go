@@ -32,7 +32,7 @@ var (
 )
 
 var (
-	name    = "passcode"
+	name    = "nhp-plugins-sdk"
 	version = "0.1.1"
 
 	baseConfigWatch io.Closer
@@ -91,23 +91,6 @@ func Init(in *plugins.PluginParamsIn) error {
 	})
 	rand.Seed(time.Now().UnixNano())
 	return nil
-}
-
-func GetAuthUrl() string {
-	if baseConf == nil {
-		log.Error("baseConf is nil")
-		return ""
-	}
-	authUrl := baseConf.AuthUrl
-	if len(authUrl) == 0 {
-		log.Error("AuthUrl is not provided.")
-		return ""
-	}
-	if !strings.HasPrefix(authUrl, "http") {
-		log.Error("AuthUrl is not a valid URL: %s", authUrl)
-		return ""
-	}
-	return authUrl
 }
 
 func updateConfig(file string) (err error) {
