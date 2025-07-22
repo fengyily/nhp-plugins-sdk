@@ -404,6 +404,10 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 	resourceGroup.ExInfo["JWTSecret"] = resRsp.JwtSecret
 	resourceGroup.ExInfo["Title"] = resRsp.SiteName
 	resourceGroup.ExInfo["TokenExpire"] = resRsp.TokenExpire
+	resourceGroup.ExInfo["Ip"] = resRsp.ServiceInfo.IP
+	resourceGroup.ExInfo["Port"] = resRsp.ServiceInfo.Port
+	resourceGroup.ExInfo["Scheme"] = resRsp.ServiceInfo.Scheme
+	//
 
 	// resourceGroup.ExInfo["AuthUrl"] = resRsp.SiteURL
 
