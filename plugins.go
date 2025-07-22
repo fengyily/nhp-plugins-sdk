@@ -17,6 +17,7 @@ import (
 	nhplog "github.com/OpenNHP/opennhp/nhp/log"
 	"github.com/OpenNHP/opennhp/nhp/plugins"
 	"github.com/OpenNHP/opennhp/nhp/utils"
+	nhppluginssdk "github.com/fengyily/nhp-plugins-sdk"
 	"github.com/gin-gonic/gin"
 
 	toml "github.com/pelletier/go-toml/v2"
@@ -436,25 +437,16 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 	return resourceGroupMap, nil
 }
 
-func FindResourceApi(ctx *gin.Context, resId string) (*common.ResourceData, error) {
+func FindResourceApi(resId string) (*common.ResourceData, error) {
 	resourceMapMutex.Lock()
 	defer resourceMapMutex.Unlock()
 
 	response, statusCode, err := findResourceFromUrl(resId)
-
-	format := ctx.Query("format")
 	if err != nil {
-		if format == "json" {
-			ctx.JSON(http.StatusOK, RefreshResponse{
-				RedirectUrl: "/plugins/passcode?resid=" + resId + "&action=error&id=" + statusCode,
-				ErrCode:     statusCode,
-				ErrMsg:      err.Error(),
-			})
-		} else {
-			ctx.Redirect(http.StatusFound, "/plugins/passcode?resid="+resId+"&action=error&id="+statusCode)
-		}
+		log.Error("FindResourceApi failed: %v", err)
 	}
 
+	log.Info("FindResourceApi statusCode=%s response: %v", statusCode, response)
 	resourceMap, err := mapResourceRsp(response)
 	if err != nil {
 		err = fmt.Errorf("mapResourceRsp failed: %v", err)
@@ -463,8 +455,9 @@ func FindResourceApi(ctx *gin.Context, resId string) (*common.ResourceData, erro
 
 	res, found := resourceMap[resId]
 	if found {
+		nhppluginssdk.Log().Info("FindResourceApi res: %v", res)
 		return res, nil
 	}
-	err = fmt.Errorf("FindResourceApi failed")
+	err = fmt.Errorf("FindResourceApi failed: not found resource with id %s", resId)
 	return nil, err
 }
