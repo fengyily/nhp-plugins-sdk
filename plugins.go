@@ -397,16 +397,19 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 		CookieDomain:       resRsp.CookieDomain,
 	}
 
-	resourceGroup.ExInfo["ClientId"] = resRsp.ExtInfo.ClientId
-	resourceGroup.ExInfo["LoginAppKey"] = resRsp.ExtInfo.LoginAppKey
-	resourceGroup.ExInfo["LoginAppSecret"] = resRsp.ExtInfo.LoginAppSecret
-	resourceGroup.ExInfo["RedirectWithParams"] = resRsp.ExtInfo.RedirectWithParams
+	resourceGroup.ExInfo, _ = StructToMap(resRsp.ExtInfo)
+	// resourceGroup.ExInfo["ClientId"] = resRsp.ExtInfo.ClientId
+	// resourceGroup.ExInfo["LoginAppKey"] = resRsp.ExtInfo.LoginAppKey
+	// resourceGroup.ExInfo["LoginAppSecret"] = resRsp.ExtInfo.LoginAppSecret
+	// resourceGroup.ExInfo["RedirectWithParams"] = resRsp.ExtInfo.RedirectWithParams
 	resourceGroup.ExInfo["JWTSecret"] = resRsp.JwtSecret
 	resourceGroup.ExInfo["Title"] = resRsp.SiteName
 	resourceGroup.ExInfo["TokenExpire"] = resRsp.TokenExpire
 	resourceGroup.ExInfo["Ip"] = resRsp.ServiceInfo.IP
 	resourceGroup.ExInfo["Port"] = resRsp.ServiceInfo.Port
 	resourceGroup.ExInfo["Scheme"] = resRsp.ServiceInfo.Scheme
+
+	//resourceGroup.ExInfo
 	//
 
 	// resourceGroup.ExInfo["AuthUrl"] = resRsp.SiteURL
@@ -515,4 +518,19 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 		log.Info("ServiceInfo JSON------------------------------: %s", string(tokenString))
 		return ackMsg, redirectURL.String(), nil
 	}
+}
+
+func StructToMap(obj interface{}) (map[string]interface{}, error) {
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
