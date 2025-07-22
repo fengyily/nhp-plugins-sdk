@@ -1,3 +1,5 @@
+github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
+github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/OpenNHP/opennhp/nhp v0.0.0-20250709031500-8fa058fd9751 h1:/fNqYPxW9NonVmk9yrSZ/MujOmoLXVNOtilf9Z/fmlk=
 github.com/OpenNHP/opennhp/nhp v0.0.0-20250709031500-8fa058fd9751/go.mod h1:9yj4ynn9/PDpVqag55PLpkfhSaVGcwZQbZdzkLPdOzk=
 github.com/bytedance/sonic v1.11.6 h1:oUp34TzMlL+OY1OUWxHqsdkgC/Zfc85zGqw9siXjrc0=

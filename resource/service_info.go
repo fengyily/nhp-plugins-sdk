@@ -1,4 +1,4 @@
-package nhppluginssdk
+package resource
 
 import (
 	"time"

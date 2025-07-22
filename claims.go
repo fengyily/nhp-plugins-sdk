@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/OpenNHP/opennhp/nhp/common"
+	"github.com/fengyily/nhp-plugins-sdk/resource"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 )
@@ -166,7 +167,7 @@ func ParseJWTToken(tokenString string) (*PasscodeClaims, error) {
 }
 
 func CreateAccessJWT(encryptedData string) (string, error) {
-	claims := JWTClaims{
+	claims := resource.JWTClaims{
 		EncryptedData: encryptedData, // 存储AES-GCM加密后的数据
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(120) * time.Second)),

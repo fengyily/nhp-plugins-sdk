@@ -9,14 +9,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/OpenNHP/opennhp/nhp/common"
 	nhplog "github.com/OpenNHP/opennhp/nhp/log"
 	"github.com/OpenNHP/opennhp/nhp/plugins"
 	"github.com/OpenNHP/opennhp/nhp/utils"
+	"github.com/fengyily/nhp-plugins-sdk/resource"
+	nhpsdkutils "github.com/fengyily/nhp-plugins-sdk/utils"
 	"github.com/gin-gonic/gin"
 
 	toml "github.com/pelletier/go-toml/v2"
@@ -36,15 +36,12 @@ var (
 	version = "0.1.1"
 
 	baseConfigWatch io.Closer
-	resConfigWatch  io.Closer
-
-	baseConf         *Config
-	resourceMapMutex sync.Mutex
-	resourceMap      common.ResourceGroupMap
+	baseConf        *resource.Config
 )
 
 var (
-	errLoadConfig = fmt.Errorf("config load error")
+	errLoadConfig  = fmt.Errorf("config load error")
+	resourceHander resource.ResourceHandler
 )
 
 func Version() string {
@@ -80,15 +77,6 @@ func Init(in *plugins.PluginParamsIn) error {
 		updateConfig(fileNameBase)
 	})
 
-	fileNameRes := filepath.Join(pluginDirPath, "etc", "resource.toml")
-	if err := updateResource(fileNameRes); err != nil {
-		// ignore error
-		_ = err
-	}
-	resConfigWatch = utils.WatchFile(fileNameRes, func() {
-		log.Info("resource config: %s has been updated", fileNameRes)
-		updateResource(fileNameRes)
-	})
 	rand.Seed(time.Now().UnixNano())
 	return nil
 }
@@ -103,39 +91,24 @@ func updateConfig(file string) (err error) {
 		log.Error("failed to read base config: %v", err)
 	}
 
-	var conf Config
+	var conf resource.Config
 	if err := toml.Unmarshal(content, &conf); err != nil {
 		log.Error("failed to unmarshal base config: %v", err)
 	}
 
 	baseConf = &conf
-	return err
-}
 
-func updateResource(file string) (err error) {
-	utils.CatchPanicThenRun(func() {
-		err = errLoadConfig
-	})
-
-	content, err := os.ReadFile(file)
-	if err != nil {
-		log.Error("failed to read resource config: %v", err)
+	switch baseConf.ResourceMode {
+	case "file":
+		resourceHander = resource.NewResource(resource.ResourceTypeFile)
+		log.Info("Resource mode set to file")
+	case "api":
+		resourceHander = resource.NewResource(resource.ResourceTypeAPI)
+		log.Info("Resource mode set to API")
+	default:
+		resourceHander = resource.NewResource(resource.ResourceTypeAPI)
+		log.Info("Resource mode set to default API")
 	}
-
-	resourceMapMutex.Lock()
-	defer resourceMapMutex.Unlock()
-
-	resourceMap = make(common.ResourceGroupMap)
-	if err := toml.Unmarshal(content, &resourceMap); err != nil {
-		log.Error("failed to unmarshal resource config: %v", err)
-	}
-
-	// res is pointer so we can update its fields
-	for resId, res := range resourceMap {
-		res.AuthServiceId = name
-		res.ResourceId = resId
-	}
-
 	return err
 }
 
@@ -143,10 +116,17 @@ func Close() error {
 	if baseConfigWatch != nil {
 		baseConfigWatch.Close()
 	}
-	if resConfigWatch != nil {
-		resConfigWatch.Close()
-	}
+
 	return nil
+}
+
+func FindResource(resId string) (*common.ResourceData, error) {
+	if resourceHander == nil {
+		log.Error("resource handler is not initialized")
+		return nil, fmt.Errorf("resource handler is not initialized")
+	}
+
+	return resourceHander.FindResourceByID(resId)
 }
 
 func RefreshToken(ctx *gin.Context, req *common.HttpKnockRequest, res *common.ResourceData, helper *plugins.HttpServerPluginHelper) (*common.ServerKnockAckMsg, error) {
@@ -289,177 +269,6 @@ func Loadbalancing[T any](m map[string]T) T {
 	return m[keys[rand.Intn(len(keys))]]
 }
 
-func findResourceFromUrl(resId string) (*ReResponse, string, error) {
-	var err error
-	AuthUrl := baseConf.AuthUrl
-	if len(AuthUrl) == 0 {
-		log.Error("AuthUrl is not provided.")
-		return nil, "401", fmt.Errorf("AuthUrl is not provided")
-	}
-	if !strings.HasPrefix(AuthUrl, "http") {
-		log.Error("AuthUrl is not a valid URL: %s", AuthUrl)
-		return nil, "403", fmt.Errorf("AuthUrl is not a valid URL: %s", AuthUrl)
-	}
-	// Prepare the request to the authentication URL
-	authUrl, err := url.Parse(AuthUrl)
-	if err != nil {
-		log.Error("failed to parse AuthUrl: %v", err)
-		return nil, "404", fmt.Errorf("failed to parse AuthUrl: %v", err)
-	}
-	reqUrl := authUrl.String()
-	if !strings.HasSuffix(reqUrl, "/") {
-		reqUrl += "/"
-	}
-	reqUrl += "ps/FindSiteByApplicationId"
-	reqUrl += "?app_id=" + resId
-	log.Info("auth request URL: %s", reqUrl)
-	httpReq, err := http.NewRequest("GET", reqUrl, nil)
-	if err != nil {
-		log.Error("failed to create HTTP request: %v", err)
-		return nil, "405", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	httpReq.Header.Set("User-Agent", "OpenNHP/"+Version())
-	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Requested-With", "XMLHttpRequest")
-	// Send the HTTP request
-	client := &http.Client{}
-	authResp, err := client.Do(httpReq)
-	if err != nil {
-		log.Error("Error sending request: %v", err)
-		return nil, "406", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	defer authResp.Body.Close()
-
-	// Read response body
-	body, err := io.ReadAll(authResp.Body)
-	if err != nil {
-		log.Error("Error reading response body: %v", err)
-		return nil, "407", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-
-	// Check HTTP status code
-	if authResp.StatusCode != http.StatusOK {
-		log.Error("API request failed with status code %d: %s", authResp.StatusCode, string(body))
-		return nil, "408", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	// Parse JSON response
-	var apiResponse FullResponse
-	err = json.Unmarshal(body, &apiResponse)
-	if err != nil {
-		log.Error("Error unmarshaling response: %v", err)
-		return nil, "409", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	if apiResponse.Code != 0 {
-		log.Error("API request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
-		return nil, fmt.Sprintf("50%d", apiResponse.Code), fmt.Errorf("API request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
-	}
-	//  Construct return structure
-	reResponse := &ReResponse{
-		FullResponseData: apiResponse.Data.FullResponseData,
-		ServiceInfo:      apiResponse.Data.ServiceInfo,
-		Resources:        apiResponse.Data.Resources,
-		ExtInfo:          apiResponse.Data.ExtInfo,
-	}
-	return reResponse, "", nil
-}
-
-func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
-	if resRsp == nil {
-		return nil, fmt.Errorf("input ReResponse is nil")
-	}
-
-	resourceGroupMap := make(common.ResourceGroupMap)
-
-	if len(resRsp.Resources) == 0 {
-		return resourceGroupMap, nil
-	}
-
-	resourceGroupId := resRsp.AppID
-
-	resourceGroup := &common.ResourceData{
-		ResourceGroup: common.ResourceGroup{
-			AuthServiceId:     name,
-			ResourceId:        resourceGroupId,
-			OpenTime:          uint32(resRsp.Opentime),
-			AuthProviderToken: resRsp.JwtSecret,
-			Resources:         make(map[string]*common.ResourceInfo),
-		},
-		// Initialize extended fields
-		AppKey:             GetStringFromMap(resRsp.ExtInfo, "LoginAppKey"),
-		AppSecret:          GetStringFromMap(resRsp.ExtInfo, "LoginAppSecret"),
-		AccessKey:          "",
-		SecretKey:          "",
-		ExInfo:             make(map[string]any),
-		RedirectUrl:        resRsp.SiteURL,
-		RedirectWithParams: false,
-		SkipAuth:           resRsp.SkipAuth,
-		CookieDomain:       resRsp.CookieDomain,
-	}
-
-	resourceGroup.ExInfo = resRsp.ExtInfo
-
-	resourceGroup.ExInfo["JWTSecret"] = resRsp.JwtSecret
-	resourceGroup.ExInfo["Title"] = resRsp.SiteName
-	resourceGroup.ExInfo["TokenExpire"] = resRsp.TokenExpire
-	resourceGroup.ExInfo["Ip"] = resRsp.ServiceInfo.IP
-	resourceGroup.ExInfo["Port"] = resRsp.ServiceInfo.Port
-	resourceGroup.ExInfo["Scheme"] = resRsp.ServiceInfo.Scheme
-
-	if GetStringFromMap(resRsp.ExtInfo, "RedirectWithParams") == "true" {
-		resourceGroup.RedirectWithParams = true
-	}
-
-	for _, res := range resRsp.Resources {
-		resourceKey := res.AcID
-
-		resourceInfo := &common.ResourceInfo{
-			ACId:       res.AcID,
-			Hostname:   res.Hostname,
-			PortSuffix: false,
-			MaskHost:   res.Maskhost,
-		}
-
-		if res.IP != "" && res.Port > 0 {
-			resourceInfo.Addr = &common.NetAddress{
-				Ip:       res.IP,
-				Port:     res.Port,
-				Protocol: res.Protocol,
-			}
-		}
-
-		resourceGroup.Resources[resourceKey] = resourceInfo
-	}
-	resourceGroupMap[resourceGroupId] = resourceGroup
-
-	return resourceGroupMap, nil
-}
-
-func FindResourceApi(resId string) (*common.ResourceData, error) {
-	resourceMapMutex.Lock()
-	defer resourceMapMutex.Unlock()
-
-	response, statusCode, err := findResourceFromUrl(resId)
-	if err != nil {
-		log.Error("FindResourceApi failed: %v", err)
-	}
-
-	log.Info("FindResourceApi statusCode=%s response: %v", statusCode, response)
-	resourceMap, err := mapResourceRsp(response)
-	if err != nil {
-		err = fmt.Errorf("mapResourceRsp failed: %v", err)
-		return nil, err
-	}
-
-	res, found := resourceMap[resId]
-	if found {
-		log.Info("FindResourceApi res: %v", res)
-		return res, nil
-	}
-	err = fmt.Errorf("FindResourceApi failed: not found resource with id %s", resId)
-	return nil, err
-}
-
 func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.ResourceData) (*common.ServerKnockAckMsg, string, error) {
 	if len(res.RedirectUrl) == 0 {
 		log.Error("RedirectUrl is not provided.")
@@ -479,11 +288,11 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			}
 			log.Info("All host [%+v] , load balancing redirectURL: %s", ackMsg.ResourceHost, redirectURL.String())
 		}
-		serviceInfo := ServiceInfo{
+		serviceInfo := resource.ServiceInfo{
 			AppId:  res.ResourceId,
-			IP:     GetStringFromMap(res.ExInfo, "Ip"),
-			Port:   GetIntFromMap(res.ExInfo, "Port"),
-			Scheme: GetStringFromMap(res.ExInfo, "Scheme"),
+			IP:     nhpsdkutils.GetStringFromMap(res.ExInfo, "Ip"),
+			Port:   nhpsdkutils.GetIntFromMap(res.ExInfo, "Port"),
+			Scheme: nhpsdkutils.GetStringFromMap(res.ExInfo, "Scheme"),
 		}
 
 		// 1. 序列化ServiceInfo为JSON
@@ -510,24 +319,4 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 		log.Info("ServiceInfo JSON------------------------------: %s", string(tokenString))
 		return ackMsg, redirectURL.String(), nil
 	}
-}
-
-func GetStringFromMap(m map[string]any, key string) string {
-	if value, ok := m[key]; ok {
-		if strValue, ok := value.(string); ok {
-			return strValue
-		}
-	}
-	return ""
-}
-
-func GetIntFromMap(m map[string]any, key string) int {
-	if value, ok := m[key]; ok {
-		if intValue, ok := value.(int); ok {
-			return intValue
-		} else if floatValue, ok := value.(float64); ok {
-			return int(floatValue)
-		}
-	}
-	return 0
 }
