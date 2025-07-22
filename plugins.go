@@ -17,7 +17,6 @@ import (
 	nhplog "github.com/OpenNHP/opennhp/nhp/log"
 	"github.com/OpenNHP/opennhp/nhp/plugins"
 	"github.com/OpenNHP/opennhp/nhp/utils"
-	nhppluginssdk "github.com/fengyily/nhp-plugins-sdk"
 	"github.com/gin-gonic/gin"
 
 	toml "github.com/pelletier/go-toml/v2"
@@ -455,7 +454,7 @@ func FindResourceApi(resId string) (*common.ResourceData, error) {
 
 	res, found := resourceMap[resId]
 	if found {
-		nhppluginssdk.Log().Info("FindResourceApi res: %v", res)
+		log.Info("FindResourceApi res: %v", res)
 		return res, nil
 	}
 	err = fmt.Errorf("FindResourceApi failed: not found resource with id %s", resId)
