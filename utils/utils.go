@@ -15,8 +15,33 @@ func GetIntFromMap(m map[string]any, key string) int {
 	if value, ok := m[key]; ok {
 		if intValue, ok := value.(int); ok {
 			return intValue
-		} else if floatValue, ok := value.(float64); ok {
+		} else if intValue, ok := value.(int64); ok {
+			return int(intValue)
+		} else if intValue, ok := value.(float64); ok {
+			return int(intValue)
+		} else if floatValue, ok := value.(float32); ok {
 			return int(floatValue)
+		} else if floatValue, ok := value.(int32); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(int16); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(int8); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(uint); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(uint64); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(uint32); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(uint16); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(uint8); ok {
+			return int(floatValue)
+		} else if floatValue, ok := value.(bool); ok {
+			if floatValue {
+				return 1 // Convert true to 1
+			}
+			return 0 // Convert false to 0
 		} else if strValue, ok := value.(string); ok {
 			if intValue, err := strconv.Atoi(strValue); err == nil {
 				return intValue
