@@ -464,3 +464,55 @@ func FindResourceApi(resId string) (*common.ResourceData, error) {
 	err = fmt.Errorf("FindResourceApi failed: not found resource with id %s", resId)
 	return nil, err
 }
+
+func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.ResourceData) (*common.ServerKnockAckMsg, string, error) {
+	if len(res.RedirectUrl) == 0 {
+		log.Error("RedirectUrl is not provided.")
+		return ackMsg, "", nil
+	} else {
+		redirectURL, err := url.Parse(res.RedirectUrl)
+		if err != nil {
+			log.Error("failed to parse redirect url: %v", err)
+			return ackMsg, "", err
+		} else {
+			defaultRes := Loadbalancing(ackMsg.ResourceHost)
+			if len(defaultRes) > 0 {
+				redirectURL.Host = defaultRes
+			} else {
+				log.Error("no resource host available for redirect")
+				return ackMsg, "", err
+			}
+			log.Info("All host [%+v] , load balancing redirectURL: %s", ackMsg.ResourceHost, redirectURL.String())
+		}
+		serviceInfo := ServiceInfo{
+			AppId:  res.ResourceId,
+			IP:     res.ExInfo["Ip"].(string),
+			Port:   res.ExInfo["Port"].(int),
+			Scheme: res.ExInfo["Scheme"].(string),
+		}
+
+		// 1. 序列化ServiceInfo为JSON
+		infoJSON, err := json.Marshal(serviceInfo)
+		if err != nil {
+			log.Error("failed to marshal service info: %v", err)
+			// return ackMsg, nil
+		}
+		// 2. AES-GCM加密
+		encryptedInfo, err := EncryptWithGCM(infoJSON)
+		if err != nil {
+			log.Error("failed to encrypt service info: %v", err)
+			return ackMsg, "", err
+		}
+		// 3. 生成JWT
+		tokenString, err := CreateAccessJWT(encryptedInfo)
+		if err != nil {
+			log.Error("failed to generate JWT: %v", err)
+			return ackMsg, "", err
+		}
+		query := redirectURL.Query()
+		query.Set("access_token", string(tokenString))
+		redirectURL.RawQuery = query.Encode()
+		log.Info("ServiceInfo JSON------------------------------: %s", string(tokenString))
+		return ackMsg, redirectURL.String(), nil
+	}
+}
