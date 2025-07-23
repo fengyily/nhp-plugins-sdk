@@ -1,12 +1,8 @@
 package resource
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/OpenNHP/opennhp/nhp/common"
 	"github.com/OpenNHP/opennhp/nhp/log"
@@ -17,7 +13,6 @@ import (
 
 type APIResourceHandler struct {
 	baseConf Config
-	in       plugins.PluginParamsIn
 }
 
 func (a *APIResourceHandler) Init(in plugins.PluginParamsIn, conf Config) error {
@@ -64,72 +59,36 @@ func (a *APIResourceHandler) findResourceFromUrl(resId string) (*models.ReRespon
 		log.Error("AuthUrl is not provided.")
 		return nil, "401", fmt.Errorf("AuthUrl is not provided")
 	}
-	if !strings.HasPrefix(AuthUrl, "http") {
-		log.Error("AuthUrl is not a valid URL: %s", AuthUrl)
-		return nil, "403", fmt.Errorf("AuthUrl is not a valid URL: %s", AuthUrl)
-	}
-	// Prepare the request to the authentication URL
-	authUrl, err := url.Parse(AuthUrl)
-	if err != nil {
-		log.Error("failed to parse AuthUrl: %v", err)
-		return nil, "404", fmt.Errorf("failed to parse AuthUrl: %v", err)
-	}
-	reqUrl := authUrl.String()
-	if !strings.HasSuffix(reqUrl, "/") {
-		reqUrl += "/"
-	}
-	reqUrl += "ps/FindSiteByApplicationId"
-	reqUrl += "?app_id=" + resId
-	log.Info("auth request URL: %s", reqUrl)
-	httpReq, err := http.NewRequest("GET", reqUrl, nil)
-	if err != nil {
-		log.Error("failed to create HTTP request: %v", err)
-		return nil, "405", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	httpReq.Header.Set("User-Agent", "OpenNHP-Plugins-SDK")
-	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Requested-With", "XMLHttpRequest")
-	// Send the HTTP request
-	client := &http.Client{}
-	authResp, err := client.Do(httpReq)
-	if err != nil {
-		log.Error("Error sending request: %v", err)
-		return nil, "406", fmt.Errorf("failed to create HTTP request: %v", err)
-	}
-	defer authResp.Body.Close()
 
-	// Read response body
-	body, err := io.ReadAll(authResp.Body)
+	resp, err := utils.SendRequest(utils.RequestOptions{
+		Method:   "GET",
+		BaseURL:  AuthUrl,
+		Endpoint: "ps/FindSiteByApplicationId",
+		QueryParams: map[string]string{
+			"app_id": resId,
+		},
+	})
 	if err != nil {
-		log.Error("Error reading response body: %v", err)
-		return nil, "407", fmt.Errorf("failed to create HTTP request: %v", err)
+		log.Error("Request failed: %v", err)
+		return nil, "402", fmt.Errorf("request failed: %v", err)
 	}
 
-	// Check HTTP status code
-	if authResp.StatusCode != http.StatusOK {
-		log.Error("API request failed with status code %d: %s", authResp.StatusCode, string(body))
-		return nil, "408", fmt.Errorf("failed to create HTTP request: %v", err)
+	if resp.StatusCode != http.StatusOK {
+		log.Error("API request failed with status code %d: %s", resp.StatusCode, string(resp.Body))
+		return nil, "403", fmt.Errorf("api request failed with status code %d: %s", resp.StatusCode, string(resp.Body))
 	}
-	// Parse JSON response
+
 	var apiResponse models.FullResponse
-	err = json.Unmarshal(body, &apiResponse)
-	if err != nil {
-		log.Error("Error unmarshaling response: %v", err)
-		return nil, "409", fmt.Errorf("failed to create HTTP request: %v", err)
+	if err := utils.ParseJSONResponse(resp, &apiResponse); err != nil {
+		log.Error("Error parsing response: %v", err)
+		return nil, "403", fmt.Errorf("error parsing response: %v", err)
 	}
 	if apiResponse.Code != 0 {
 		log.Error("API request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
-		return nil, fmt.Sprintf("50%d", apiResponse.Code), fmt.Errorf("API request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
+		return nil, fmt.Sprintf("50%d", apiResponse.Code), fmt.Errorf("api request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
 	}
-	//  Construct return structure
-	reResponse := &models.ReResponse{
-		FullResponseData: apiResponse.Data.FullResponseData,
-		ServiceInfo:      apiResponse.Data.ServiceInfo,
-		Resources:        apiResponse.Data.Resources,
-		ExtInfo:          apiResponse.Data.ExtInfo,
-	}
-	return reResponse, "", nil
+
+	return &apiResponse.Data, "", nil
 }
 
 func mapResourceRsp(resRsp *models.ReResponse) (common.ResourceGroupMap, error) {

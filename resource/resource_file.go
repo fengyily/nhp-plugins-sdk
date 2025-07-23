@@ -24,10 +24,10 @@ var (
 
 type FileResourceHandler struct {
 	baseConf Config
-	in       plugins.PluginParamsIn
 }
 
 func (f *FileResourceHandler) Init(in plugins.PluginParamsIn, conf Config) error {
+
 	f.baseConf = conf
 	fileNameRes := filepath.Join(*in.PluginDirPath, "etc", "resource.toml")
 	if err := updateResource(fileNameRes); err != nil {
