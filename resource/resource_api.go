@@ -11,19 +11,23 @@ import (
 	"github.com/OpenNHP/opennhp/nhp/common"
 	"github.com/OpenNHP/opennhp/nhp/log"
 	"github.com/OpenNHP/opennhp/nhp/plugins"
+	"github.com/fengyily/nhp-plugins-sdk/models"
 	"github.com/fengyily/nhp-plugins-sdk/utils"
 )
 
-type APIResourceHandler struct{}
+type APIResourceHandler struct {
+	baseConf Config
+	in       plugins.PluginParamsIn
+}
 
-func (a *APIResourceHandler) Init(in *plugins.PluginParamsIn, conf *Config) error {
-	baseConf = conf
+func (a *APIResourceHandler) Init(in plugins.PluginParamsIn, conf Config) error {
+	a.baseConf = conf
 	// Initialization logic for API resource handler
 	return nil // Placeholder return
 }
 
-func (a *APIResourceHandler) Update(conf *Config) error {
-	baseConf = conf
+func (a *APIResourceHandler) Update(conf Config) error {
+	a.baseConf = conf
 	// Update logic for API resource handler
 	return nil // Placeholder return
 }
@@ -32,7 +36,7 @@ func (a *APIResourceHandler) FindResourceByID(resId string) (*common.ResourceDat
 	resourceMapMutex.Lock()
 	defer resourceMapMutex.Unlock()
 
-	response, statusCode, err := findResourceFromUrl(resId)
+	response, statusCode, err := a.findResourceFromUrl(resId)
 	if err != nil {
 		log.Error("FindResourceApi failed: %v", err)
 	}
@@ -53,9 +57,9 @@ func (a *APIResourceHandler) FindResourceByID(resId string) (*common.ResourceDat
 	return nil, err
 }
 
-func findResourceFromUrl(resId string) (*ReResponse, string, error) {
+func (a *APIResourceHandler) findResourceFromUrl(resId string) (*models.ReResponse, string, error) {
 	var err error
-	AuthUrl := baseConf.AuthUrl
+	AuthUrl := a.baseConf.AuthUrl
 	if len(AuthUrl) == 0 {
 		log.Error("AuthUrl is not provided.")
 		return nil, "401", fmt.Errorf("AuthUrl is not provided")
@@ -108,7 +112,7 @@ func findResourceFromUrl(resId string) (*ReResponse, string, error) {
 		return nil, "408", fmt.Errorf("failed to create HTTP request: %v", err)
 	}
 	// Parse JSON response
-	var apiResponse FullResponse
+	var apiResponse models.FullResponse
 	err = json.Unmarshal(body, &apiResponse)
 	if err != nil {
 		log.Error("Error unmarshaling response: %v", err)
@@ -119,7 +123,7 @@ func findResourceFromUrl(resId string) (*ReResponse, string, error) {
 		return nil, fmt.Sprintf("50%d", apiResponse.Code), fmt.Errorf("API request failed with code %d: %s", apiResponse.Code, apiResponse.Msg)
 	}
 	//  Construct return structure
-	reResponse := &ReResponse{
+	reResponse := &models.ReResponse{
 		FullResponseData: apiResponse.Data.FullResponseData,
 		ServiceInfo:      apiResponse.Data.ServiceInfo,
 		Resources:        apiResponse.Data.Resources,
@@ -128,7 +132,7 @@ func findResourceFromUrl(resId string) (*ReResponse, string, error) {
 	return reResponse, "", nil
 }
 
-func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
+func mapResourceRsp(resRsp *models.ReResponse) (common.ResourceGroupMap, error) {
 	if resRsp == nil {
 		return nil, fmt.Errorf("input ReResponse is nil")
 	}
@@ -202,4 +206,8 @@ func mapResourceRsp(resRsp *ReResponse) (common.ResourceGroupMap, error) {
 func (a *APIResourceHandler) Close() error {
 
 	return nil
+}
+
+func (a *APIResourceHandler) GetConfig() Config {
+	return a.baseConf
 }

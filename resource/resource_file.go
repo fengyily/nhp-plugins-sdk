@@ -22,10 +22,13 @@ var (
 	errLoadConfig    = fmt.Errorf("config load error")
 )
 
-type FileResourceHandler struct{}
+type FileResourceHandler struct {
+	baseConf Config
+	in       plugins.PluginParamsIn
+}
 
-func (f *FileResourceHandler) Init(in *plugins.PluginParamsIn, conf *Config) error {
-	baseConf = conf
+func (f *FileResourceHandler) Init(in plugins.PluginParamsIn, conf Config) error {
+	f.baseConf = conf
 	fileNameRes := filepath.Join(*in.PluginDirPath, "etc", "resource.toml")
 	if err := updateResource(fileNameRes); err != nil {
 		// ignore error
@@ -38,8 +41,8 @@ func (f *FileResourceHandler) Init(in *plugins.PluginParamsIn, conf *Config) err
 	return nil
 }
 
-func (a *FileResourceHandler) Update(conf *Config) error {
-	baseConf = conf
+func (f *FileResourceHandler) Update(conf Config) error {
+	f.baseConf = conf
 	// Update logic for API resource handler
 	return nil // Placeholder return
 }
@@ -88,4 +91,8 @@ func (f *FileResourceHandler) Close() error {
 		resConfigWatch.Close()
 	}
 	return nil
+}
+
+func (f *FileResourceHandler) GetConfig() Config {
+	return f.baseConf
 }

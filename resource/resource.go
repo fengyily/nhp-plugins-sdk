@@ -5,8 +5,6 @@ import (
 	"github.com/OpenNHP/opennhp/nhp/plugins"
 )
 
-var baseConf *Config
-
 type ResourceType int
 
 const (
@@ -15,10 +13,11 @@ const (
 )
 
 type ResourceHandler interface {
-	Init(in *plugins.PluginParamsIn, baseConf *Config) error
-	Update(baseConf *Config) error
+	Init(in plugins.PluginParamsIn, baseConf Config) error
+	Update(baseConf Config) error
 	FindResourceByID(id string) (*common.ResourceData, error)
 	Close() error
+	GetConfig() Config
 }
 
 func NewResource(resourceType ResourceType) ResourceHandler {

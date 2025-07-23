@@ -1,6 +1,13 @@
 package utils
 
-import "strconv"
+import (
+	"math/rand"
+	"strconv"
+	"time"
+
+	"github.com/fengyily/nhp-plugins-sdk/models"
+	"github.com/golang-jwt/jwt/v4"
+)
 
 func GetStringFromMap(m map[string]any, key string) string {
 	if value, ok := m[key]; ok {
@@ -49,4 +56,34 @@ func GetIntFromMap(m map[string]any, key string) int {
 		}
 	}
 	return 0
+}
+
+func Loadbalancing[T any](m map[string]T) T {
+	var zero T // 类型的零值
+
+	rand.Seed(time.Now().UnixNano())
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	if len(keys) == 0 {
+		return zero
+	}
+
+	return m[keys[rand.Intn(len(keys))]]
+}
+
+func CreateAccessJWT(encryptedData string, signingKey string) (string, error) {
+	claims := models.JWTClaims{
+		EncryptedData: encryptedData, // 存储AES-GCM加密后的数据
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(120) * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "opennhp", // 发行者标识
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(signingKey))
 }

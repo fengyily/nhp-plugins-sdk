@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/OpenNHP/opennhp/nhp/common"
-	"github.com/fengyily/nhp-plugins-sdk/resource"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 )
@@ -164,18 +163,4 @@ func ParseJWTToken(tokenString string) (*PasscodeClaims, error) {
 	return &PasscodeClaims{
 		ResourceID: resourceID,
 	}, nil
-}
-
-func CreateAccessJWT(encryptedData string) (string, error) {
-	claims := resource.JWTClaims{
-		EncryptedData: encryptedData, // 存储AES-GCM加密后的数据
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(120) * time.Second)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "opennhp", // 发行者标识
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(baseConf.SigningKey))
 }

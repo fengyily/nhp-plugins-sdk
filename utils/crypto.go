@@ -1,4 +1,4 @@
-package nhppluginssdk
+package utils
 
 import (
 	"crypto/aes"
@@ -9,8 +9,8 @@ import (
 	"io"
 )
 
-func EncryptWithGCM(plaintext []byte) (string, error) {
-	block, err := aes.NewCipher([]byte(baseConf.AesKey))
+func EncryptWithGCM(plaintext []byte, aesKey string) (string, error) {
+	block, err := aes.NewCipher([]byte(aesKey))
 	if err != nil {
 		return "", err
 	}
@@ -29,7 +29,7 @@ func EncryptWithGCM(plaintext []byte) (string, error) {
 	return base64.URLEncoding.EncodeToString(ciphertext), nil
 }
 
-func DecryptGCM(ciphertext string) ([]byte, error) {
+func DecryptGCM(ciphertext string, aesKey string) ([]byte, error) {
 	// 解码Base64字符串
 	decoded, err := base64.URLEncoding.DecodeString(ciphertext)
 	if err != nil {
@@ -37,7 +37,7 @@ func DecryptGCM(ciphertext string) ([]byte, error) {
 	}
 
 	// 创建AES加密块
-	block, err := aes.NewCipher([]byte(baseConf.AesKey))
+	block, err := aes.NewCipher([]byte(aesKey))
 	if err != nil {
 		return nil, err
 	}

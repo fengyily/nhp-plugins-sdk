@@ -15,6 +15,7 @@ import (
 	nhplog "github.com/OpenNHP/opennhp/nhp/log"
 	"github.com/OpenNHP/opennhp/nhp/plugins"
 	"github.com/OpenNHP/opennhp/nhp/utils"
+	"github.com/fengyily/nhp-plugins-sdk/models"
 	"github.com/fengyily/nhp-plugins-sdk/resource"
 	nhpsdkutils "github.com/fengyily/nhp-plugins-sdk/utils"
 	"github.com/gin-gonic/gin"
@@ -36,19 +37,19 @@ var (
 	version = "0.1.1"
 
 	baseConfigWatch io.Closer
-	baseConf        *resource.Config
 )
 
+type HanderUpdateFunc func(handler resource.ResourceHandler) error
+
 var (
-	errLoadConfig  = fmt.Errorf("config load error")
-	resourceHander resource.ResourceHandler
+	errLoadConfig = fmt.Errorf("config load error")
 )
 
 func Version() string {
 	return fmt.Sprintf("%s v%s", name, version)
 }
 
-func Init(in *plugins.PluginParamsIn) error {
+func Init(in *plugins.PluginParamsIn, hander HanderUpdateFunc) (err error) {
 	if in.PluginDirPath != nil {
 		pluginDirPath = *in.PluginDirPath
 	}
@@ -67,22 +68,21 @@ func Init(in *plugins.PluginParamsIn) error {
 
 	// load config
 	fileNameBase := (filepath.Join(pluginDirPath, "etc", "config.toml"))
-	if err := updateConfig(fileNameBase); err != nil {
+	if err := updateConfig(fileNameBase, in, hander); err != nil {
 		// ignore error
 		_ = err
 	}
 
 	baseConfigWatch = utils.WatchFile(fileNameBase, func() {
 		log.Info("base config: %s has been updated", fileNameBase)
-		updateConfig(fileNameBase)
+		updateConfig(fileNameBase, in, hander)
 	})
 
-	resourceHander.Init(in, baseConf)
 	rand.Seed(time.Now().UnixNano())
 	return nil
 }
 
-func updateConfig(file string) (err error) {
+func updateConfig(file string, in *plugins.PluginParamsIn, hander HanderUpdateFunc) (err error) {
 	utils.CatchPanicThenRun(func() {
 		err = errLoadConfig
 	})
@@ -96,10 +96,8 @@ func updateConfig(file string) (err error) {
 	if err := toml.Unmarshal(content, &conf); err != nil {
 		log.Error("failed to unmarshal base config: %v", err)
 	}
-
-	baseConf = &conf
-
-	switch baseConf.ResourceMode {
+	var resourceHander resource.ResourceHandler
+	switch conf.ResourceMode {
 	case "file":
 		resourceHander = resource.NewResource(resource.ResourceTypeFile)
 		log.Info("Resource mode set to file")
@@ -109,6 +107,13 @@ func updateConfig(file string) (err error) {
 	default:
 		resourceHander = resource.NewResource(resource.ResourceTypeAPI)
 		log.Info("Resource mode set to default API")
+	}
+	if hander != nil {
+		resourceHander.Init(*in, conf)
+		if err := hander(resourceHander); err != nil {
+			log.Error("Failed to update resource handler: %v", err)
+			return fmt.Errorf("failed to update resource handler: %w", err)
+		}
 	}
 
 	return err
@@ -120,15 +125,6 @@ func Close() error {
 	}
 
 	return nil
-}
-
-func FindResource(resId string) (*common.ResourceData, error) {
-	if resourceHander == nil {
-		log.Error("resource handler is not initialized")
-		return nil, fmt.Errorf("resource handler is not initialized")
-	}
-
-	return resourceHander.FindResourceByID(resId)
 }
 
 func RefreshToken(ctx *gin.Context, req *common.HttpKnockRequest, res *common.ResourceData, helper *plugins.HttpServerPluginHelper) (*common.ServerKnockAckMsg, error) {
@@ -255,23 +251,7 @@ func getCookie(name string, c *gin.Context) string {
 	}
 }
 
-func Loadbalancing[T any](m map[string]T) T {
-	var zero T // 类型的零值
-
-	rand.Seed(time.Now().UnixNano())
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-
-	if len(keys) == 0 {
-		return zero
-	}
-
-	return m[keys[rand.Intn(len(keys))]]
-}
-
-func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.ResourceData) (*common.ServerKnockAckMsg, string, error) {
+func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.ResourceData, conf resource.Config) (*common.ServerKnockAckMsg, string, error) {
 	if len(res.RedirectUrl) == 0 {
 		log.Error("RedirectUrl is not provided.")
 		return ackMsg, "", nil
@@ -281,7 +261,7 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			log.Error("failed to parse redirect url: %v", err)
 			return ackMsg, "", err
 		} else {
-			defaultRes := Loadbalancing(ackMsg.ResourceHost)
+			defaultRes := nhpsdkutils.Loadbalancing(ackMsg.ResourceHost)
 			if len(defaultRes) > 0 {
 				redirectURL.Host = defaultRes
 			} else {
@@ -290,7 +270,7 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			}
 			log.Info("All host [%+v] , load balancing redirectURL: %s", ackMsg.ResourceHost, redirectURL.String())
 		}
-		serviceInfo := resource.ServiceInfo{
+		serviceInfo := models.ServiceInfo{
 			AppId:  res.ResourceId,
 			IP:     nhpsdkutils.GetStringFromMap(res.ExInfo, "Ip"),
 			Port:   nhpsdkutils.GetIntFromMap(res.ExInfo, "Port"),
@@ -304,13 +284,13 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			// return ackMsg, nil
 		}
 		// 2. AES-GCM加密
-		encryptedInfo, err := EncryptWithGCM(infoJSON)
+		encryptedInfo, err := nhpsdkutils.EncryptWithGCM(infoJSON, conf.AesKey)
 		if err != nil {
 			log.Error("failed to encrypt service info: %v", err)
 			return ackMsg, "", err
 		}
 		// 3. 生成JWT
-		tokenString, err := CreateAccessJWT(encryptedInfo)
+		tokenString, err := nhpsdkutils.CreateAccessJWT(encryptedInfo, conf.AesKey)
 		if err != nil {
 			log.Error("failed to generate JWT: %v", err)
 			return ackMsg, "", err
