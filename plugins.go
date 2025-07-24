@@ -210,8 +210,11 @@ func RefreshToken(ctx *gin.Context, req *common.HttpKnockRequest, res *common.Re
 
 func CorsMiddleware(c *gin.Context) {
 
-	// Must be the SPECIFIC origin (not *) when credentials are true
-	c.Header("Access-Control-Allow-Origin", "*")
+	origin := c.GetHeader("Origin")
+	if len(origin) == 0 {
+		origin = "*.opennhp.cn"
+	}
+	c.Header("Access-Control-Allow-Origin", origin)
 	c.Header("Access-Control-Allow-Credentials", "true")
 
 	c.Header("Access-Control-Allow-Methods", "POST, GET, PUT, PATCH, OPTIONS, DELETE")
