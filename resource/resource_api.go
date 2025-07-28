@@ -3,6 +3,7 @@ package resource
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/OpenNHP/opennhp/nhp/common"
 	"github.com/OpenNHP/opennhp/nhp/log"
@@ -12,7 +13,9 @@ import (
 )
 
 type APIResourceHandler struct {
-	baseConf Config
+	name             string
+	baseConf         Config
+	resourceMapMutex sync.Mutex
 }
 
 func (a *APIResourceHandler) Init(in plugins.PluginParamsIn, conf Config) error {
@@ -28,8 +31,8 @@ func (a *APIResourceHandler) Update(conf Config) error {
 }
 
 func (a *APIResourceHandler) FindResourceByID(resId string) (*common.ResourceData, error) {
-	resourceMapMutex.Lock()
-	defer resourceMapMutex.Unlock()
+	a.resourceMapMutex.Lock()
+	defer a.resourceMapMutex.Unlock()
 
 	response, statusCode, err := a.findResourceFromUrl(resId)
 	if err != nil {
@@ -37,7 +40,7 @@ func (a *APIResourceHandler) FindResourceByID(resId string) (*common.ResourceDat
 	}
 
 	log.Info("FindResourceApi statusCode=%s response: %v", statusCode, response)
-	resourceMap, err := mapResourceRsp(response)
+	resourceMap, err := a.mapResourceRsp(response)
 	if err != nil {
 		err = fmt.Errorf("mapResourceRsp failed: %v", err)
 		return nil, err
@@ -91,7 +94,7 @@ func (a *APIResourceHandler) findResourceFromUrl(resId string) (*models.ReRespon
 	return &apiResponse.Data, "", nil
 }
 
-func mapResourceRsp(resRsp *models.ReResponse) (common.ResourceGroupMap, error) {
+func (a *APIResourceHandler) mapResourceRsp(resRsp *models.ReResponse) (common.ResourceGroupMap, error) {
 	if resRsp == nil {
 		return nil, fmt.Errorf("input ReResponse is nil")
 	}
@@ -106,7 +109,7 @@ func mapResourceRsp(resRsp *models.ReResponse) (common.ResourceGroupMap, error) 
 
 	resourceGroup := &common.ResourceData{
 		ResourceGroup: common.ResourceGroup{
-			AuthServiceId:     name,
+			AuthServiceId:     a.name,
 			ResourceId:        resourceGroupId,
 			OpenTime:          uint32(resRsp.Opentime),
 			AuthProviderToken: resRsp.JwtSecret,
