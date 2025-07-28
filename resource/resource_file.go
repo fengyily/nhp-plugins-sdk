@@ -11,6 +11,7 @@ import (
 	"github.com/OpenNHP/opennhp/nhp/log"
 	"github.com/OpenNHP/opennhp/nhp/plugins"
 	"github.com/OpenNHP/opennhp/nhp/utils"
+	nhpsdkutils "github.com/fengyily/nhp-plugins-sdk/utils"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -53,6 +54,8 @@ func (f *FileResourceHandler) FindResourceByID(resId string) (*common.ResourceDa
 
 	res, found := f.resourceMap[resId]
 	if found {
+		res.AppKey = nhpsdkutils.GetStringFromMap(res.ExInfo, "LoginAppKey")
+		res.AppSecret = nhpsdkutils.GetStringFromMap(res.ExInfo, "LoginAppSecret")
 		return res, nil
 	}
 	return nil, common.ErrResourceNotFound
