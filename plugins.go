@@ -212,7 +212,8 @@ func CorsMiddleware(c *gin.Context) {
 
 	origin := c.GetHeader("Origin")
 	if len(origin) == 0 {
-		origin = "*.opennhp.cn"
+		host := c.Request.Host
+		origin = "https://" + host
 	}
 	c.Header("Access-Control-Allow-Origin", origin)
 	c.Header("Access-Control-Allow-Credentials", "true")
