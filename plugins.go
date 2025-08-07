@@ -210,6 +210,7 @@ func RefreshToken(ctx *gin.Context, req *common.HttpKnockRequest, res *common.Re
 
 func CorsMiddleware(c *gin.Context) {
 
+	c.SetSameSite(http.SameSiteNoneMode)
 	origin := c.GetHeader("Origin")
 	if len(origin) == 0 {
 		host := c.Request.Host
