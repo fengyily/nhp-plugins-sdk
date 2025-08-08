@@ -71,7 +71,7 @@ func (jwttoken *JWTToken) GenerateAll(ac string, res *common.ResourceData) (stri
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-10 * time.Second)), // 提前10秒生效
 			Issuer:    "opennhp",
 		},
 	}
@@ -105,7 +105,7 @@ func (jwttoken *JWTToken) ExchangeNHPToken(nhpToken string, nhpRefreshToken stri
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(openTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-10 * time.Second)), // 提前10秒生效
 			Issuer:    "opennhp",
 		},
 	}
