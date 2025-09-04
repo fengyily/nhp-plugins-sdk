@@ -5,6 +5,7 @@ type Config struct {
 	ExamplePassword string
 	ResourceMode    string
 	AuthUrl         string
+	IAMServiceUrl   string
 	SigningKey      string
 	AesKey          string
 }
