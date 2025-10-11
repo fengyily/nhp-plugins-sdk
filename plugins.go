@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 
 	"github.com/OpenNHP/opennhp/nhp/common"
@@ -83,13 +84,24 @@ func Init(in *plugins.PluginParamsIn, hander HanderUpdateFunc) (err error) {
 }
 
 func updateConfig(file string, in *plugins.PluginParamsIn, hander HanderUpdateFunc) (err error) {
-	utils.CatchPanicThenRun(func() {
-		err = errLoadConfig
-	})
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("🔥 PANIC in updateConfig: %v", r)
+			debug.PrintStack()
+			err = fmt.Errorf("panic in updateConfig: %v", r)
+		}
+	}()
+
+	// 1. 检查文件是否存在
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		log.Error("Config file does not exist: %s", file)
+		return fmt.Errorf("config file not found: %s", file)
+	}
 
 	content, err := os.ReadFile(file)
 	if err != nil {
 		log.Error("failed to read base config: %v", err)
+		return fmt.Errorf("read config failed: %w", err)
 	}
 
 	var conf resource.Config
