@@ -141,7 +141,7 @@ func (a *APIResourceHandler) mapResourceRsp(resRsp *models.ReResponse) (common.R
 	}
 
 	for _, res := range resRsp.Resources {
-		resourceKey := res.AcID
+		resourceKey := fmt.Sprintf("%s_%s_%d", res.AcID, res.IP, res.Port)
 
 		resourceInfo := &common.ResourceInfo{
 			ACId:       res.AcID,
