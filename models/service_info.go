@@ -51,14 +51,23 @@ type ResourceData struct {
 	Protocol string `json:"protocol"`
 }
 
-type ServiceInfo struct {
-	AppId  string `json:"app_id"`
-	IP     string `json:"ip"`
-	Port   int    `json:"port"`
-	Scheme string `json:"scheme"` // 注意是小写 "scheme"
-}
-
 type JWTClaims struct {
 	EncryptedData string `json:"access_key"` // 加密后的数据
 	jwt.RegisteredClaims
+}
+
+type SubServiceInfo struct {
+	IP      string `json:"ip"`
+	Port    int    `json:"port"`
+	Scheme  string `json:"scheme"`
+	MapPort int    `json:"map_port"`
+}
+
+type ServiceInfo struct {
+	AppId   string           `json:"app_id"`
+	IP      string           `json:"ip"`
+	Port    int              `json:"port"`
+	Scheme  string           `json:"scheme"`
+	MapPort int              `json:"map_port"`
+	Sub     []SubServiceInfo `json:"sub"`
 }

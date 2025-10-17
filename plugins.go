@@ -287,11 +287,41 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			}
 			log.Info("All host [%+v] , load balancing redirectURL: %s", ackMsg.ResourceHost, redirectURL.String())
 		}
+
+		mainIP := nhpsdkutils.GetStringFromMap(res.ExInfo, "ip")
+		mainPort := nhpsdkutils.GetIntFromMap(res.ExInfo, "port")
+		mainScheme := nhpsdkutils.GetStringFromMap(res.ExInfo, "scheme")
+		mainConport := nhpsdkutils.GetIntFromMap(res.ExInfo, "map_port")
+		subRaw := res.ExInfo["sub"]
+		var subServices []models.SubServiceInfo
+
+		if subArray, ok := subRaw.([]interface{}); ok {
+			for _, item := range subArray {
+				if subMap, ok := item.(map[string]interface{}); ok {
+					subIP := nhpsdkutils.GetStringFromMap(subMap, "ip")
+					subPort := nhpsdkutils.GetIntFromMap(subMap, "port")
+					subScheme := nhpsdkutils.GetStringFromMap(subMap, "scheme")
+					subMapPort := nhpsdkutils.GetIntFromMap(subMap, "map_port")
+
+					subSvc := models.SubServiceInfo{
+						IP:      subIP,
+						Port:    subPort,
+						Scheme:  subScheme,
+						MapPort: subMapPort,
+					}
+					subServices = append(subServices, subSvc)
+				}
+			}
+		} else {
+			log.Warning("sub is not an array or missing, skipping sub services")
+		}
 		serviceInfo := models.ServiceInfo{
-			AppId:  res.ResourceId,
-			IP:     nhpsdkutils.GetStringFromMap(res.ExInfo, "Ip"),
-			Port:   nhpsdkutils.GetIntFromMap(res.ExInfo, "Port"),
-			Scheme: nhpsdkutils.GetStringFromMap(res.ExInfo, "Scheme"),
+			AppId:   res.ResourceId,
+			IP:      mainIP,
+			Port:    mainPort,
+			Scheme:  mainScheme,
+			MapPort: mainConport,
+			Sub:     subServices,
 		}
 
 		// 1. 序列化ServiceInfo为JSON
