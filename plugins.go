@@ -288,11 +288,11 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			log.Info("All host [%+v] , load balancing redirectURL: %s", ackMsg.ResourceHost, redirectURL.String())
 		}
 
-		mainIP := nhpsdkutils.GetStringFromMap(res.ExInfo, "ip")
-		mainPort := nhpsdkutils.GetIntFromMap(res.ExInfo, "port")
-		mainScheme := nhpsdkutils.GetStringFromMap(res.ExInfo, "scheme")
-		mainConport := nhpsdkutils.GetIntFromMap(res.ExInfo, "map_port")
-		subRaw := res.ExInfo["sub"]
+		mainIP := nhpsdkutils.GetStringFromMap(res.ExInfo, "Ip")
+		mainPort := nhpsdkutils.GetIntFromMap(res.ExInfo, "Port")
+		mainScheme := nhpsdkutils.GetStringFromMap(res.ExInfo, "Scheme")
+		mainConport := nhpsdkutils.GetIntFromMap(res.ExInfo, "MapPort")
+		subRaw := res.ExInfo["Sub"]
 		var subServices []models.SubServiceInfo
 
 		if subArray, ok := subRaw.([]interface{}); ok {
