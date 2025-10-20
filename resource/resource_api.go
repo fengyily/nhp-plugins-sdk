@@ -136,6 +136,7 @@ func (a *APIResourceHandler) mapResourceRsp(resRsp *models.ReResponse) (common.R
 	resourceGroup.ExInfo["Port"] = resRsp.ServiceInfo.Port
 	resourceGroup.ExInfo["Scheme"] = resRsp.ServiceInfo.Scheme
 	resourceGroup.ExInfo["MapPort"] = resRsp.ServiceInfo.MapPort
+	resourceGroup.ExInfo["ConPort"] = resRsp.ServiceInfo.ConnectorPort
 	resourceGroup.ExInfo["Sub"] = resRsp.ServiceInfo.Sub
 
 	if utils.GetStringFromMap(resRsp.ExtInfo, "RedirectWithParams") == "true" {

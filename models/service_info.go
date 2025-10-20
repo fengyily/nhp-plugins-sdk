@@ -56,18 +56,16 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-type SubServiceInfo struct {
-	IP      string `json:"ip"`
-	Port    int    `json:"port"`
-	Scheme  string `json:"scheme"`
-	MapPort int    `json:"map_port"`
+type Resource struct {
+	IP            string `json:"ip"`
+	Port          int    `json:"port"`
+	Scheme        string `json:"scheme"`
+	MapPort       int    `json:"map_port"`
+	ConnectorPort int    `json:"connector_port"`
 }
 
 type ServiceInfo struct {
-	AppId   string           `json:"app_id"`
-	IP      string           `json:"ip"`
-	Port    int              `json:"port"`
-	Scheme  string           `json:"scheme"`
-	MapPort int              `json:"map_port"`
-	Sub     []SubServiceInfo `json:"sub"`
+	AppId string `json:"app_id"`
+	Resource
+	Sub []Resource `json:"sub"`
 }

@@ -291,9 +291,10 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 		mainIP := nhpsdkutils.GetStringFromMap(res.ExInfo, "Ip")
 		mainPort := nhpsdkutils.GetIntFromMap(res.ExInfo, "Port")
 		mainScheme := nhpsdkutils.GetStringFromMap(res.ExInfo, "Scheme")
-		mainConport := nhpsdkutils.GetIntFromMap(res.ExInfo, "MapPort")
+		mainMapPort := nhpsdkutils.GetIntFromMap(res.ExInfo, "MapPort")
+		mainConport := nhpsdkutils.GetIntFromMap(res.ExInfo, "ConPort")
 		subRaw := res.ExInfo["Sub"]
-		var subServices []models.SubServiceInfo
+		var subServices []models.Resource
 
 		if subArray, ok := subRaw.([]interface{}); ok {
 			for _, item := range subArray {
@@ -302,12 +303,14 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 					subPort := nhpsdkutils.GetIntFromMap(subMap, "port")
 					subScheme := nhpsdkutils.GetStringFromMap(subMap, "scheme")
 					subMapPort := nhpsdkutils.GetIntFromMap(subMap, "map_port")
+					subConPort := nhpsdkutils.GetIntFromMap(subMap, "con_port")
 
-					subSvc := models.SubServiceInfo{
-						IP:      subIP,
-						Port:    subPort,
-						Scheme:  subScheme,
-						MapPort: subMapPort,
+					subSvc := models.Resource{
+						IP:            subIP,
+						Port:          subPort,
+						Scheme:        subScheme,
+						MapPort:       subMapPort,
+						ConnectorPort: subConPort,
 					}
 					subServices = append(subServices, subSvc)
 				}
@@ -316,12 +319,15 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			log.Warning("sub is not an array or missing, skipping sub services")
 		}
 		serviceInfo := models.ServiceInfo{
-			AppId:   res.ResourceId,
-			IP:      mainIP,
-			Port:    mainPort,
-			Scheme:  mainScheme,
-			MapPort: mainConport,
-			Sub:     subServices,
+			AppId: res.ResourceId,
+			Resource: models.Resource{
+				IP:            mainIP,
+				Port:          mainPort,
+				Scheme:        mainScheme,
+				MapPort:       mainMapPort,
+				ConnectorPort: mainConport,
+			},
+			Sub: subServices,
 		}
 
 		// 1. 序列化ServiceInfo为JSON
