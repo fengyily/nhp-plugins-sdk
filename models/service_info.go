@@ -61,7 +61,7 @@ type Resource struct {
 	Port          int    `json:"port"`
 	Scheme        string `json:"scheme"`
 	MapPort       int    `json:"map_port"`
-	ConnectorPort int    `json:"connector_port"`
+	ConnectorPort int    `json:"con_port"`
 }
 
 type ServiceInfo struct {
