@@ -58,13 +58,16 @@ func GetIntFromMap(m map[string]any, key string) int {
 	return 0
 }
 
-func Loadbalancing[T any](m map[string]T) T {
-	var zero T // 类型的零值
+func Loadbalancing[T comparable](m map[string]T) T {
+	var zero T
 
 	rand.Seed(time.Now().UnixNano())
 	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
+	for k, v := range m {
+		// 直接比较，因为 T 是 comparable 类型
+		if v != zero {
+			keys = append(keys, k)
+		}
 	}
 
 	if len(keys) == 0 {
