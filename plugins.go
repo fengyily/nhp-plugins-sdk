@@ -278,6 +278,7 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 			log.Error("failed to parse redirect url: %v", err)
 			return ackMsg, "", err
 		} else {
+
 			defaultRes := nhpsdkutils.Loadbalancing(ackMsg.ResourceHost)
 			if len(defaultRes) > 0 {
 				redirectURL.Host = defaultRes
@@ -296,24 +297,18 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 		subRaw := res.ExInfo["Sub"]
 		var subServices []models.Resource
 
-		if subArray, ok := subRaw.([]interface{}); ok {
+		if subArray, ok := subRaw.([]models.Resource); ok {
+			log.Warning("subArray is of type []models.Resource{} with length %d", len(subArray))
 			for _, item := range subArray {
-				if subMap, ok := item.(map[string]interface{}); ok {
-					subIP := nhpsdkutils.GetStringFromMap(subMap, "ip")
-					subPort := nhpsdkutils.GetIntFromMap(subMap, "port")
-					subScheme := nhpsdkutils.GetStringFromMap(subMap, "scheme")
-					subMapPort := nhpsdkutils.GetIntFromMap(subMap, "map_port")
-					subConPort := nhpsdkutils.GetIntFromMap(subMap, "con_port")
-
-					subSvc := models.Resource{
-						IP:            subIP,
-						Port:          subPort,
-						Scheme:        subScheme,
-						MapPort:       subMapPort,
-						ConnectorPort: subConPort,
-					}
-					subServices = append(subServices, subSvc)
+				subSvc := models.Resource{
+					IP:            item.IP,
+					Port:          item.Port,
+					Scheme:        item.Scheme,
+					MapPort:       item.MapPort,
+					ConnectorPort: item.ConnectorPort,
 				}
+				subServices = append(subServices, subSvc)
+
 			}
 		} else {
 			log.Warning("sub is not an array or missing, skipping sub services")
