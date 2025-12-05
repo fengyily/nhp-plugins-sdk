@@ -65,7 +65,9 @@ type Resource struct {
 }
 
 type ServiceInfo struct {
-	AppId string `json:"app_id"`
+	AppId  string `json:"app_id"`
+	Action string `json:"action,omitempty"` // action 类型：access, valid, knock 等
+	User   string `json:"user,omitempty"`   // 请求用户，如果没有则为 anonymous
 	Resource
 	Sub []Resource `json:"sub"`
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/fengyily/nhp-plugins-sdk/resource"
 	nhpsdkutils "github.com/fengyily/nhp-plugins-sdk/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 
 	toml "github.com/pelletier/go-toml/v2"
 )
@@ -268,7 +269,58 @@ func getCookie(name string, c *gin.Context) string {
 	}
 }
 
-func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.ResourceData, conf resource.Config) (*common.ServerKnockAckMsg, string, error) {
+// GetUserFromAuthHeader 从 Authorization header 中解析用户信息
+// 支持 Bearer token 格式，尝试从 JWT 中提取用户名
+// 如果无法解析或 header 为空，返回 "anonymous"
+func GetUserFromAuthHeader(authHeader string) string {
+	if len(authHeader) == 0 {
+		return "anonymous"
+	}
+
+	// 移除 "Bearer " 前缀
+	tokenString := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		tokenString = authHeader[7:]
+	}
+
+	// 尝试解析 JWT 获取用户信息（不验证签名，只解析 payload）
+	user, err := parseUserFromJWT(tokenString)
+	if err != nil {
+		log.Warning("failed to parse auth token for user: %v", err)
+		return "anonymous"
+	}
+
+	if len(user) > 0 {
+		return user
+	}
+
+	return "anonymous"
+}
+
+// parseUserFromJWT 从 JWT 中解析用户信息，使用通用的 claims 结构
+func parseUserFromJWT(tokenString string) (string, error) {
+	// 使用 MapClaims 来解析任意结构的 JWT
+	claims := jwt.MapClaims{}
+	parser := new(jwt.Parser)
+	_, _, err := parser.ParseUnverified(tokenString, claims)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse token unverified: %v", err)
+	}
+
+	// 按优先级返回用户标识，检查各种常见的字段名
+	fieldPriority := []string{"sub", "user_id", "userId", "username", "name", "email", "preferred_username"}
+	for _, field := range fieldPriority {
+		if val, ok := claims[field]; ok {
+			if strVal, ok := val.(string); ok && strVal != "" {
+				return strVal, nil
+			}
+		}
+	}
+
+	return "", nil
+}
+
+func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.ResourceData, conf resource.Config, action string, user string) (*common.ServerKnockAckMsg, string, error) {
 	if len(res.RedirectUrl) == 0 {
 		log.Error("RedirectUrl is not provided.")
 		return ackMsg, "", nil
@@ -313,8 +365,16 @@ func GetRedirectUrlByResource(ackMsg *common.ServerKnockAckMsg, res *common.Reso
 		} else {
 			log.Warning("sub is not an array or missing, skipping sub services")
 		}
+
+		// 如果 user 为空，设置为 anonymous
+		if len(user) == 0 {
+			user = "anonymous"
+		}
+
 		serviceInfo := models.ServiceInfo{
-			AppId: res.ResourceId,
+			AppId:  res.ResourceId,
+			Action: action,
+			User:   user,
 			Resource: models.Resource{
 				IP:            mainIP,
 				Port:          mainPort,
